@@ -1,6 +1,9 @@
 package ro.teamnet.zth;
 
+import org.codehaus.jackson.map.ObjectMapper;
+import ro.teamnet.zth.fmk.MethodAttributes;
 import ro.teamnet.zth.fmk.domain.HttpMethod;
+import ro.teamnet.zth.utils.BeanDeserializator;
 import ro.teamnet.zth.utils.ControllerScanner;
 
 import javax.servlet.ServletException;
@@ -8,11 +11,15 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 
 public class Z2HDispatcherServlet extends HttpServlet {
 
+    private ControllerScanner controllerScanner;
     @Override
     public void init() throws ServletException {
+        controllerScanner = new ControllerScanner("ro.teamnet.zth.appl.controller");
+        controllerScanner.scan();
     }
 
     @Override
@@ -52,12 +59,22 @@ public class Z2HDispatcherServlet extends HttpServlet {
         resp.getWriter().print(e.getMessage());
     }
 
-    private void reply(HttpServletResponse resp, Object resultToDisplay) {
-
+    private void reply(HttpServletResponse resp, Object resultToDisplay) throws IOException {
+        resp.getWriter().write((String) resultToDisplay);
     }
 
     private Object dispatch(HttpServletRequest req, HttpMethod methodType) {
+        MethodAttributes methodAttributes = controllerScanner.getMetaData(req.getPathInfo(), methodType);
+
+        try {
+            methodAttributes.getMethod().invoke(BeanDeserializator.getMethodParams(methodAttributes.getMethod(), req));
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        }
         return null;
+
     }
 
 
